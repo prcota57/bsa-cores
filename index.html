@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BSA Cores">
+<title>BSA Cores</title>
+<style>
+*, *::before, *::after {
+  box-sizing: border-box; margin: 0; padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+html, body {
+  width: 100%; height: 100%; overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Rounded', sans-serif;
+  -webkit-user-select: none; user-select: none;
+}
+body {
+  display: flex; flex-direction: column;
+  background: #111;
+  transition: background 0.15s ease;
+}
+#topbar {
+  flex-shrink: 0;
+  display: flex; align-items: center; gap: 10px;
+  padding-top: max(16px, env(safe-area-inset-top));
+  padding-bottom: 14px;
+  padding-left: 18px; padding-right: 18px;
+  background: rgba(0,0,0,0.5);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  z-index: 100;
+}
+.lbl {
+  font-size: 13px; font-weight: 800;
+  color: rgba(255,255,255,0.6);
+  min-width: 22px; text-align: center;
+}
+#slider {
+  flex: 1; height: 7px; border-radius: 10px;
+  -webkit-appearance: none; appearance: none;
+  background: rgba(255,255,255,0.25); outline: none;
+}
+#slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 34px; height: 34px; border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+#speed-display {
+  font-size: 20px; font-weight: 900; color: #fff;
+  min-width: 40px; text-align: center;
+}
+#btn-parar {
+  width: 46px; height: 46px; border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+  border: 2px solid rgba(255,255,255,0.4);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0;
+}
+#arena {
+  flex: 1; display: flex;
+  flex-direction: column; align-items: center; justify-content: center;
+  padding: 16px 24px;
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+}
+#idle {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 20px;
+}
+#idle-emoji { font-size: 72px; line-height: 1; }
+#idle-title { font-size: 28px; font-weight: 900; color: rgba(255,255,255,0.9); }
+#idle-sub { font-size: 15px; color: rgba(255,255,255,0.4); font-weight: 500; }
+#btn-iniciar {
+  margin-top: 8px;
+  width: 200px; height: 64px; border-radius: 32px;
+  background: #fff; border: none; outline: none;
+  font-size: 22px; font-weight: 900; color: #111;
+  cursor: pointer; -webkit-appearance: none; appearance: none;
+  box-shadow: 0 4px 24px rgba(255,255,255,0.15);
+}
+#btn-iniciar:active { transform: scale(0.96); }
+
+/* cor ativa */
+#cor-card {
+  display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+  gap: 24px; width: 100%;
+}
+#cor-card.visible { display: flex; }
+#cor-circulo {
+  width: min(68vw, 300px);
+  height: min(68vw, 300px);
+  border-radius: 50%;
+  box-shadow: 0 12px 60px rgba(0,0,0,0.5);
+  transition: background 0.15s;
+}
+#cor-nome {
+  font-size: 56px; font-weight: 900;
+  color: rgba(255,255,255,0.95);
+  letter-spacing: 3px; text-transform: uppercase;
+  text-align: center; line-height: 1;
+  text-shadow: 0 2px 20px rgba(0,0,0,0.4);
+}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <span class="lbl">1s</span>
+  <input type="range" id="slider" min="1" max="10" value="3" step="1">
+  <span id="speed-display">3s</span>
+  <div id="btn-parar">
+    <svg width="16" height="16" viewBox="0 0 16 16">
+      <rect x="2" y="2" width="12" height="12" rx="2.5" fill="white"/>
+    </svg>
+  </div>
+</div>
+
+<div id="arena">
+  <div id="idle">
+    <div id="idle-emoji">🎨</div>
+    <div id="idle-title">BSA Cores</div>
+    <div id="idle-sub">Toque para começar</div>
+    <button id="btn-iniciar" type="button">INICIAR</button>
+  </div>
+  <div id="cor-card">
+    <div id="cor-circulo"></div>
+    <div id="cor-nome"></div>
+  </div>
+</div>
+
+<script>
+// Cores com sons DIFERENTES e distintos
+// Azul  → nota grave  (220 Hz) — som baixo e encorpado
+// Amarelo → nota média (440 Hz) — lá central, familiar
+// Vermelho → nota aguda (880 Hz) — som alto e urgente
+var CORES = [
+  {
+    nome: 'AZUL',
+    cor:  '#0057B8',
+    bg:   '#001533',
+    freq: 220,        // grave
+    tipo: 'sine',
+    dur:  0.5
+  },
+  {
+    nome: 'AMARELO',
+    cor:  '#FFD700',
+    bg:   '#2A1F00',
+    freq: 440,        // médio
+    tipo: 'triangle',
+    dur:  0.4
+  },
+  {
+    nome: 'VERMELHO',
+    cor:  '#DD1717',
+    bg:   '#2A0000',
+    freq: 880,        // agudo
+    tipo: 'square',
+    dur:  0.25
+  }
+];
+
+var atual = -1, timer = null, rodando = false;
+var audioCtx = null;
+
+function getAC() {
+  if (!audioCtx || audioCtx.state === 'closed') {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function tocar(cor) {
+  try {
+    var ac = getAC();
+    var now = ac.currentTime;
+    var o = ac.createOscillator();
+    var g = ac.createGain();
+    o.type = cor.tipo;
+    o.frequency.value = cor.freq;
+    g.gain.setValueAtTime(0.0, now);
+    g.gain.linearRampToValueAtTime(0.3, now + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.001, now + cor.dur);
+    o.connect(g); g.connect(ac.destination);
+    o.start(now);
+    o.stop(now + cor.dur);
+  } catch(e) {}
+}
+
+var elBody    = document.body;
+var elSlider  = document.getElementById('slider');
+var elSpeed   = document.getElementById('speed-display');
+var elParar   = document.getElementById('btn-parar');
+var elIniciar = document.getElementById('btn-iniciar');
+var elIdle    = document.getElementById('idle');
+var elCard    = document.getElementById('cor-card');
+var elCirculo = document.getElementById('cor-circulo');
+var elNome    = document.getElementById('cor-nome');
+
+elSlider.addEventListener('input', function() {
+  elSpeed.textContent = elSlider.value + 's';
+  if (rodando) { clearInterval(timer); timer = setInterval(trocar, elSlider.value * 1000); }
+});
+
+function trocar() {
+  var prox;
+  do { prox = Math.floor(Math.random() * CORES.length); } while (prox === atual);
+  atual = prox;
+  var c = CORES[atual];
+  elBody.style.background = c.bg;
+  elCirculo.style.background = c.cor;
+  elNome.textContent = c.nome;
+  tocar(c);
+}
+
+function iniciar() {
+  getAC();
+  rodando = true;
+  elIdle.style.display = 'none';
+  elCard.classList.add('visible');
+  trocar();
+  timer = setInterval(trocar, elSlider.value * 1000);
+}
+
+function parar() {
+  rodando = false;
+  clearInterval(timer); atual = -1;
+  elBody.style.background = '#111';
+  elIdle.style.display = 'flex';
+  elCard.classList.remove('visible');
+}
+
+function addTap(el, fn) {
+  el.addEventListener('touchend', function(e) { e.preventDefault(); fn(); });
+  el.addEventListener('click',    function(e) { e.preventDefault(); fn(); });
+}
+
+addTap(elIniciar, function() { if (!rodando) iniciar(); });
+addTap(elParar,   function() { if (rodando)  parar();  });
+
+document.addEventListener('visibilitychange', function() {
+  if (!document.hidden && audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+});
+</script>
+</body>
+</html>
