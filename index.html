@@ -148,5 +148,10 @@ document.addEventListener('visibilitychange', function() {
   if (!document.hidden && audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
 });
 </script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('sw.js').catch(function(){}); });
+}
+</script>
 </body>
 </html>
